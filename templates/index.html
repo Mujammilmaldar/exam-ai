@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Practical Generator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0a0a0f;
+            color: #e4e4e7;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Animated gradient background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background:
+                radial-gradient(ellipse at 20% 50%, rgba(120, 60, 255, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 20%, rgba(0, 200, 255, 0.06) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 80%, rgba(255, 60, 170, 0.05) 0%, transparent 50%);
+            z-index: -1;
+            animation: bgPulse 8s ease-in-out infinite alternate;
+        }
+
+        @keyframes bgPulse {
+            0% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 48px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #a78bfa, #60a5fa, #f472b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+        }
+
+        .header p {
+            color: #71717a;
+            font-size: 1rem;
+            font-weight: 300;
+        }
+
+        .header .emoji {
+            font-size: 3rem;
+            margin-bottom: 16px;
+            display: block;
+            -webkit-text-fill-color: initial;
+        }
+
+        /* Generate Card */
+        .card {
+            background: rgba(24, 24, 32, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 16px;
+            padding: 32px;
+            backdrop-filter: blur(20px);
+            margin-bottom: 32px;
+            transition: border-color 0.3s;
+        }
+
+        .card:hover {
+            border-color: rgba(167, 139, 250, 0.2);
+        }
+
+        .card h2 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #d4d4d8;
+        }
+
+        /* Input */
+        .input-group {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .input-group textarea {
+            width: 100%;
+            padding: 16px 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            color: #e4e4e7;
+            font-size: 1rem;
+            font-family: 'Inter', sans-serif;
+            resize: vertical;
+            min-height: 100px;
+            outline: none;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        .input-group textarea:focus {
+            border-color: rgba(167, 139, 250, 0.5);
+            box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.1);
+        }
+
+        .input-group textarea::placeholder {
+            color: #52525b;
+        }
+
+        /* Button */
+        .btn-generate {
+            width: 100%;
+            padding: 14px 28px;
+            background: linear-gradient(135deg, #7c3aed, #6366f1);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-generate:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 30px rgba(124, 58, 237, 0.3);
+        }
+
+        .btn-generate:active {
+            transform: translateY(0);
+        }
+
+        .btn-generate:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-generate .spinner {
+            display: none;
+            width: 20px; height: 20px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        .btn-generate.loading .spinner { display: inline-block; }
+        .btn-generate.loading .btn-text { opacity: 0.8; }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Status */
+        .status {
+            margin-top: 20px;
+            padding: 14px 18px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            display: none;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+        .status.success {
+            display: block;
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.2);
+            color: #4ade80;
+        }
+
+        .status.error {
+            display: block;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: #f87171;
+        }
+
+        .status.info {
+            display: block;
+            background: rgba(96, 165, 250, 0.1);
+            border: 1px solid rgba(96, 165, 250, 0.2);
+            color: #60a5fa;
+        }
+
+        /* Practicals List */
+        .practicals-list {
+            list-style: none;
+        }
+
+        .practicals-list li {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            border-radius: 10px;
+            margin-bottom: 8px;
+            transition: all 0.2s;
+        }
+
+        .practicals-list li:hover {
+            background: rgba(167, 139, 250, 0.05);
+            border-color: rgba(167, 139, 250, 0.15);
+        }
+
+        .file-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .file-icon {
+            font-size: 1.3rem;
+        }
+
+        .file-name {
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .file-size {
+            color: #71717a;
+            font-size: 0.8rem;
+        }
+
+        .file-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-small {
+            padding: 6px 14px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: transparent;
+            color: #a1a1aa;
+            font-size: 0.8rem;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-small:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+        }
+
+        .btn-small.download:hover {
+            border-color: rgba(34, 197, 94, 0.4);
+            color: #4ade80;
+        }
+
+        .btn-small.view:hover {
+            border-color: rgba(96, 165, 250, 0.4);
+            color: #60a5fa;
+        }
+
+        /* Code Preview Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            z-index: 100;
+            animation: fadeIn 0.2s;
+        }
+
+        .modal-overlay.active { display: flex; align-items: center; justify-content: center; }
+
+        .modal {
+            background: #18181f;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            width: 90%; max-width: 700px;
+            max-height: 80vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 16px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .modal-header h3 { font-size: 1rem; font-weight: 600; }
+
+        .modal-close {
+            background: none; border: none; color: #71717a;
+            font-size: 1.5rem; cursor: pointer;
+            transition: color 0.2s;
+        }
+        .modal-close:hover { color: white; }
+
+        .modal-body {
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .modal-body pre {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 16px;
+            border-radius: 10px;
+            overflow-x: auto;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            font-family: 'Courier New', monospace;
+            color: #a78bfa;
+        }
+
+        /* curl hint */
+        .curl-hint {
+            margin-top: 40px;
+            text-align: center;
+        }
+
+        .curl-hint p {
+            color: #52525b;
+            font-size: 0.85rem;
+            margin-bottom: 10px;
+        }
+
+        .curl-hint code {
+            display: inline-block;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 10px 18px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            color: #a78bfa;
+            font-family: 'Courier New', monospace;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            word-break: break-all;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px;
+            color: #52525b;
+        }
+
+        .empty-state .icon { font-size: 2rem; margin-bottom: 10px; }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .header h1 { font-size: 1.8rem; }
+            .card { padding: 20px; }
+            .practicals-list li { flex-direction: column; gap: 10px; align-items: flex-start; }
+            .file-actions { width: 100%; }
+            .btn-small { flex: 1; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <span class="emoji">🧠</span>
+            <h1>AI Practical Generator</h1>
+            <p>Type your aim → Get Python code → Download instantly</p>
+        </div>
+
+        <!-- Generate Card -->
+        <div class="card">
+            <h2>🎯 Enter Your Practical Aim</h2>
+            <div class="input-group">
+                <textarea id="aimInput" placeholder="e.g. Write a Python program to perform chi-square test using scipy&#10;e.g. Implement decision tree classifier on iris dataset&#10;e.g. Create a program for multiple linear regression"></textarea>
+            </div>
+            <button class="btn-generate" id="generateBtn" onclick="generate()">
+                <span class="spinner"></span>
+                <span class="btn-text">⚡ Generate & Download</span>
+            </button>
+            <div class="status" id="status"></div>
+        </div>
+
+        <!-- Existing Practicals -->
+        <div class="card">
+            <h2>📁 Stored Practicals</h2>
+            <ul class="practicals-list" id="practicalsList">
+                <li class="empty-state">
+                    <div class="icon">📂</div>
+                    <div>Loading...</div>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Curl Hint -->
+        <div class="curl-hint">
+            <p>Or use curl from terminal:</p>
+            <code>curl -X POST YOUR_DOMAIN/generate -F "aim=your aim here" -o practical.py</code>
+        </div>
+    </div>
+
+    <!-- Code Preview Modal -->
+    <div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="modalTitle">Code Preview</h3>
+                <button class="modal-close" onclick="document.getElementById('modalOverlay').classList.remove('active')">×</button>
+            </div>
+            <div class="modal-body">
+                <pre id="modalCode"></pre>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API = window.location.origin;
+
+        // Load practicals on page load
+        window.addEventListener('DOMContentLoaded', loadPracticals);
+
+        async function loadPracticals() {
+            try {
+                const res = await fetch(`${API}/list`);
+                const data = await res.json();
+                const list = document.getElementById('practicalsList');
+
+                if (data.count === 0) {
+                    list.innerHTML = `
+                        <li class="empty-state">
+                            <div class="icon">📭</div>
+                            <div>No practicals yet. Generate your first one above!</div>
+                        </li>`;
+                    return;
+                }
+
+                list.innerHTML = data.practicals.map(p => `
+                    <li>
+                        <div class="file-info">
+                            <span class="file-icon">🐍</span>
+                            <span class="file-name">${p.filename}</span>
+                            <span class="file-size">${formatSize(p.size)}</span>
+                        </div>
+                        <div class="file-actions">
+                            <button class="btn-small view" onclick="viewFile('${p.filename}')">View</button>
+                            <button class="btn-small download" onclick="downloadFile('${p.filename}')">Download</button>
+                        </div>
+                    </li>
+                `).join('');
+            } catch (e) {
+                console.error('Failed to load practicals:', e);
+            }
+        }
+
+        async function generate() {
+            const aim = document.getElementById('aimInput').value.trim();
+            if (!aim) {
+                showStatus('Please enter an aim first!', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('generateBtn');
+            btn.classList.add('loading');
+            btn.disabled = true;
+            showStatus('🧠 AI is thinking... Finding or generating your practical...', 'info');
+
+            try {
+                const formData = new FormData();
+                formData.append('aim', aim);
+
+                const res = await fetch(`${API}/generate`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (res.headers.get('content-type')?.includes('application/json')) {
+                    const data = await res.json();
+                    showStatus(`❌ ${data.error || 'Something went wrong'}`, 'error');
+                    return;
+                }
+
+                // File download
+                const blob = await res.blob();
+                const disposition = res.headers.get('content-disposition') || '';
+                let filename = 'practical.py';
+                const match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+                if (match) filename = match[1].replace(/['"]/g, '');
+
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                a.click();
+                URL.revokeObjectURL(url);
+
+                const status = res.headers.get('X-Status') || 'downloaded';
+                const changes = res.headers.get('X-Changes') || '';
+
+                let msg = `✅ Downloaded: ${filename}`;
+                if (status === 'existing') msg += ' (matched existing file)';
+                else if (status === 'updated') msg += ` (updated — ${changes})`;
+                else if (status === 'generated') msg += ' (freshly generated!)';
+                if (status.includes('multiple')) msg += ' (ZIP with multiple files)';
+
+                showStatus(msg, 'success');
+                loadPracticals(); // Refresh list
+
+            } catch (e) {
+                showStatus(`❌ Error: ${e.message}`, 'error');
+            } finally {
+                btn.classList.remove('loading');
+                btn.disabled = false;
+            }
+        }
+
+        async function viewFile(filename) {
+            try {
+                const res = await fetch(`${API}/view/${filename}`);
+                const data = await res.json();
+                document.getElementById('modalTitle').textContent = filename;
+                document.getElementById('modalCode').textContent = data.content;
+                document.getElementById('modalOverlay').classList.add('active');
+            } catch (e) {
+                alert('Failed to load file');
+            }
+        }
+
+        function downloadFile(filename) {
+            const a = document.createElement('a');
+            a.href = `${API}/download/${filename}`;
+            a.download = filename;
+            a.click();
+        }
+
+        function closeModal(event) {
+            if (event.target === document.getElementById('modalOverlay')) {
+                document.getElementById('modalOverlay').classList.remove('active');
+            }
+        }
+
+        function showStatus(message, type) {
+            const el = document.getElementById('status');
+            el.className = `status ${type}`;
+            el.textContent = message;
+        }
+
+        function formatSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            return (bytes / 1024).toFixed(1) + ' KB';
+        }
+
+        // Ctrl+Enter to submit
+        document.getElementById('aimInput').addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 'Enter') generate();
+        });
+    </script>
+</body>
+</html>
