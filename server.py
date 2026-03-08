@@ -221,6 +221,71 @@ async def delete_practical(filename: str):
 
 
 # ──────────────────────────────────────────────
+#  Debug endpoint — test AI without file download
+# ──────────────────────────────────────────────
+@app.post("/debug-generate")
+async def debug_generate(aim: str = Form(...)):
+    """Debug endpoint — returns JSON with full AI response details instead of file download."""
+    import traceback
+    import time
+
+    aim = aim.strip()
+    debug_info = {"aim": aim, "steps": []}
+
+    # Step 1: List practicals
+    practicals = storage.list_practicals()
+    debug_info["practicals_count"] = len(practicals)
+    debug_info["practicals"] = [p["filename"] for p in practicals]
+
+    # Step 2: Try AI search
+    if practicals:
+        try:
+            start = time.time()
+            search_result = ai_engine.search_matching_practical(aim, practicals)
+            elapsed = round(time.time() - start, 2)
+            debug_info["steps"].append({
+                "step": "AI Search",
+                "status": "success",
+                "time_seconds": elapsed,
+                "result": search_result
+            })
+        except Exception as e:
+            debug_info["steps"].append({
+                "step": "AI Search",
+                "status": "error",
+                "error": str(e),
+                "traceback": traceback.format_exc()
+            })
+
+    # Step 3: Try AI generation
+    try:
+        start = time.time()
+        gen_result = ai_engine.generate_practical(aim)
+        elapsed = round(time.time() - start, 2)
+        # Truncate code for debugging display
+        files_preview = {}
+        for fname, code in gen_result.get("files", {}).items():
+            files_preview[fname] = code[:500] + "..." if len(code) > 500 else code
+        debug_info["steps"].append({
+            "step": "AI Generate",
+            "status": "success",
+            "time_seconds": elapsed,
+            "files": list(gen_result.get("files", {}).keys()),
+            "description": gen_result.get("description", ""),
+            "preview": files_preview
+        })
+    except Exception as e:
+        debug_info["steps"].append({
+            "step": "AI Generate",
+            "status": "error",
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        })
+
+    return JSONResponse(content=debug_info)
+
+
+# ──────────────────────────────────────────────
 #  Health check
 # ──────────────────────────────────────────────
 @app.get("/health")
