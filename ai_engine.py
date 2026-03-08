@@ -86,18 +86,31 @@ def _clean_json_response(text: str) -> str:
 def _parse_json(text: str) -> dict:
     """Parse JSON from AI response, handling common issues."""
     cleaned = _clean_json_response(text)
-    try:
-        return json.loads(cleaned)
-    except json.JSONDecodeError as e:
-        logger.warning(f"JSON parse failed: {e}")
-        logger.warning(f"Text preview: {cleaned[:300]}")
-        match = re.search(r'\{[\s\S]*\}', cleaned)
+
+    # Try parsing methods in order of strictness
+    for attempt_text in [cleaned]:
+        # 1. Normal parse
+        try:
+            return json.loads(attempt_text)
+        except json.JSONDecodeError:
+            pass
+
+        # 2. Lenient parse (allows newlines in strings — common with code)
+        try:
+            return json.loads(attempt_text, strict=False)
+        except json.JSONDecodeError:
+            pass
+
+        # 3. Extract JSON object from text
+        match = re.search(r'\{[\s\S]*\}', attempt_text)
         if match:
             try:
-                return json.loads(match.group())
+                return json.loads(match.group(), strict=False)
             except json.JSONDecodeError:
                 pass
-        raise ValueError(f"Could not parse JSON from AI response:\n{text[:500]}")
+
+    logger.warning(f"JSON parse failed for: {cleaned[:300]}")
+    raise ValueError(f"Could not parse JSON from AI response:\n{text[:500]}")
 
 
 def generate_practical(aim: str) -> dict:
